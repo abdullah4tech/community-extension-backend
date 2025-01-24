@@ -1,0 +1,25 @@
+{
+  "name": "community-extension-backend",
+  "version": "1.0.0",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "node nodemon index.js",
+    "start": "node index.js"
+  },
+  "keywords": [
+    "chrome-extension",
+    "extension"
+  ],
+  "author": "Abdullah Mustapha",
+  "license": "MIT",
+  "description": "A backend for a community extension",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "puppeteer": "^24.1.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  }
+}
