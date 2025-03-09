@@ -33,6 +33,11 @@ const closeBrowser = async () => {
 };
 
 app.get('/scrape', async (req, res) => {
+  
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');	
+
   console.log('Processing scrape request...');
   const url = req.query.url;
 
