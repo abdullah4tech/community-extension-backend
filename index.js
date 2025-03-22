@@ -61,6 +61,7 @@ app.get('/scrape', async (req, res) => {
     );
 
     await page.close();
+    console.log(bountiesTitles);
 
     // Check for new bounties
     const newBounties = bountiesTitles.filter(title => !currentBounties.includes(title));
