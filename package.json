@@ -5,8 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "nodemon index.js",
-    "start": "node index.js",
-    "postinstall": "apt-get update && apt-get install -y wget --no-install-recommends && apt-get install -y libnss3 libxss1 libasound2"
+    "start": "node index.js"
   },
   "keywords": [
     "chrome-extension",

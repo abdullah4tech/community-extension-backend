@@ -19,7 +19,6 @@ const initializeBrowser = async () => {
   if (!browser) {
     try {
       browser = await puppeteer.launch({
-        executablePath: process.env.CHROME_BIN || '/usr/bin/google-chrome', // Use system Chrome if available
         headless: 'new', // Use new headless mode
         args: [
           '--no-sandbox',
