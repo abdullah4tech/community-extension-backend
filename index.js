@@ -1,9 +1,9 @@
 import express from 'express';
 import cors from 'cors';
-import puppeteer from 'puppeteer';
+import puppeteer from 'puppeteer-core'; // Use puppeteer-core for better compatibility
 
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
@@ -17,10 +17,22 @@ let browser;
 // Function to initialize the browser
 const initializeBrowser = async () => {
   if (!browser) {
-    browser = await puppeteer.launch({
-      headless: true, // Run in headless mode for performance
-      args: ['--no-sandbox', '--disable-setuid-sandbox'], // Improve container compatibility
-    });
+    try {
+      browser = await puppeteer.launch({
+        executablePath: process.env.CHROME_BIN || '/usr/bin/google-chrome', // Use system Chrome if available
+        headless: 'new', // Use new headless mode
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-gpu',
+          '--single-process',
+          '--no-zygote'
+        ],
+      });
+    } catch (error) {
+      console.error('Failed to launch Puppeteer:', error);
+    }
   }
 };
 
@@ -33,24 +45,26 @@ const closeBrowser = async () => {
 };
 
 app.get('/scrape', async (req, res) => {
-  
   res.setHeader('Access-Control-Allow-Origin', 'https://earn.christex.foundation');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');	
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   console.log('Processing scrape request...');
   const url = req.query.url;
 
   if (!url) {
-    return res.status(400).send('URL is required');
+    return res.status(400).json({ error: 'URL is required' });
   }
 
   try {
     // Ensure the browser is initialized
     await initializeBrowser();
+    if (!browser) {
+      return res.status(500).json({ error: 'Puppeteer failed to initialize' });
+    }
 
     const page = await browser.newPage();
-    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 }); // Set timeout and wait strategy
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
 
     // Extract bounty titles
     const bountiesTitles = await page.evaluate(() =>
@@ -61,14 +75,13 @@ app.get('/scrape', async (req, res) => {
     );
 
     await page.close();
-    console.log(bountiesTitles);
+    console.log('Extracted Titles:', bountiesTitles);
 
     // Check for new bounties
     const newBounties = bountiesTitles.filter(title => !currentBounties.includes(title));
 
-    // If new bounties are found, update the current bounties array
     if (newBounties.length > 0) {
-      currentBounties = [...currentBounties, ...newBounties]; // Add new bounties to the array
+      currentBounties = [...currentBounties, ...newBounties];
       return res.json({
         message: 'New bounties found',
         newBounties,
@@ -76,14 +89,14 @@ app.get('/scrape', async (req, res) => {
       });
     }
 
-    // If no new bounties are found, just return the current bounties
     return res.json({
       message: 'No new bounties found',
       currentBounties,
     });
+
   } catch (error) {
-    console.error('Error:', error);
-    res.status(500).send('An error occurred while scraping');
+    console.error('Scraping error:', error);
+    return res.status(500).json({ error: 'An error occurred while scraping' });
   }
 });
 

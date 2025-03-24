@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "nodemon index.js",
-    "start": "node index.js"
+    "start": "node index.js",
+    "postinstall": "apt-get update && apt-get install -y wget --no-install-recommends && apt-get install -y libnss3 libxss1 libasound2"
   },
   "keywords": [
     "chrome-extension",
@@ -17,7 +18,7 @@
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.21.2",
-    "puppeteer": "^24.1.0",
+    "puppeteer-core": "^24.4.0",
     "serverless-http": "^3.2.0"
   },
   "devDependencies": {
