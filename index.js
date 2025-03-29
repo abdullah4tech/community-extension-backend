@@ -1,6 +1,6 @@
 import express from 'express';
 import cors from 'cors';
-import puppeteer from 'puppeteer-core'; // Use puppeteer-core for better compatibility
+import puppeteer from 'puppeteer';
 
 const app = express();
 const port = process.env.PORT || 3000;
