@@ -46,7 +46,7 @@ RUN npm install --production
 COPY . .
 
 # 7. Expose the port your app runs on
-EXPOSE 3000 # Or whatever port your Express app uses (e.g., 10000 for Render default)
+EXPOSE 3000
 
 # 8. Define the command to run your application
 CMD [ "node", "index.js" ]
