@@ -65,32 +65,85 @@ app.get('/scrape', async (req, res) => {
     const page = await browser.newPage();
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
 
-    // Extract bounty titles
-    const bountiesTitles = await page.evaluate(() =>
+    // Extract bounty tags, titles, and dates
+    const bountiesData = await page.evaluate(() =>
       Array.from(
-        document.querySelectorAll('body > div > div > div > a > div > p'),
-        el => el.textContent.trim()
-      )
+        document.querySelectorAll('a.framer-19zlxqr.framer-lux5qc'), // Main bounty link container
+        (bountyContainer) => {
+          const tagElement = bountyContainer.querySelector('div.framer-11yqaqs p.framer-text'); // Selector for tag
+          const titleElement = bountyContainer.querySelector('div.framer-atuki1 p.framer-text'); 
+          const dateElement = bountyContainer.querySelector('div.framer-q33siq div.framer-g2p6vw p.framer-text');
+
+          return {
+            tag: tagElement ? tagElement.textContent.trim() : null,
+            title: titleElement ? titleElement.textContent.trim() : null,
+            dateString: dateElement ? (dateElement.getAttribute('datetime') || dateElement.textContent.trim()) : null,
+          };
+        }
+      ).filter(bounty => bounty.tag && bounty.title && bounty.dateString) // Ensure tag, title, and date are found
     );
 
     await page.close();
-    console.log('Extracted Titles:', bountiesTitles);
+    console.log('Extracted Bounty Data (with tags):', bountiesData);
 
-    // Check for new bounties
-    const newBounties = bountiesTitles.filter(title => !currentBounties.includes(title));
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); 
 
-    if (newBounties.length > 0) {
-      currentBounties = [...currentBounties, ...newBounties];
+    const allScrapedBountiesWithDetails = bountiesData.map(bounty => {
+      let isExpired = false;
+      if (bounty.dateString) {
+        const parsedDate = new Date(bounty.dateString);
+        if (!isNaN(parsedDate.getTime())) {
+          const bountyDateNormalized = new Date(parsedDate);
+          bountyDateNormalized.setHours(0, 0, 0, 0);
+          if (bountyDateNormalized < today) {
+            isExpired = true;
+          }
+        } else {
+          console.warn(`Could not parse date: "${bounty.dateString}" for "${bounty.title}"`);
+          isExpired = true; 
+        }
+      } else {
+        console.warn(`No date string for bounty: "${bounty.title}"`);
+        isExpired = true; 
+      }
+      return {
+        tag: bounty.tag,
+        title: bounty.title,
+        dateString: bounty.dateString,
+        isExpired: isExpired,
+      };
+    });
+
+    // Group bounties by tag for the main response body
+    const bountiesByTag = allScrapedBountiesWithDetails.reduce((acc, bounty) => {
+      const { tag } = bounty;
+      if (!acc[tag]) {
+        acc[tag] = [];
+      }
+      acc[tag].push(bounty);
+      return acc;
+    }, {});
+
+    // 'currentBounties' (server-side) stores full bounty objects {tag, title, dateString, isExpired} 
+    // to determine if a scraped bounty title has been seen before.
+    const newBountyObjects = allScrapedBountiesWithDetails.filter(
+      (scrapedBounty) => !currentBounties.some((cb) => cb.title === scrapedBounty.title)
+    );
+
+    if (newBountyObjects.length > 0) {
+      currentBounties = [...currentBounties, ...newBountyObjects];
       return res.json({
-        message: 'New bounties found',
-        newBounties,
-        currentBounties,
+        message: 'Bounties updated. New bounties found.',
+        bountiesByTag: bountiesByTag, // All bounties from current scrape, grouped by tag
+        newlyAddedBounties: newBountyObjects, // Flat list of bounties considered "new"
       });
     }
 
     return res.json({
-      message: 'No new bounties found',
-      currentBounties,
+      message: 'Bounties checked. No new bounties found.',
+      bountiesByTag: bountiesByTag, // All bounties from current scrape, grouped by tag
+      newlyAddedBounties: [],
     });
 
   } catch (error) {
